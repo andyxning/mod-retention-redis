@@ -50,14 +50,18 @@ def get_instance(plugin):
         logger.error('Missing the module python-redis. Please install it.')
         raise Exception
     server = plugin.server
-    instance = Redis_retention_scheduler(plugin, server)
+    password = plugin.password
+    port = int(plugin.port)
+    instance = Redis_retention_scheduler(plugin, server, password, port)
     return instance
 
 
 class Redis_retention_scheduler(BaseModule):
-    def __init__(self, modconf, server):
+    def __init__(self, modconf, server, password, port):
         BaseModule.__init__(self, modconf)
         self.server = server
+        self.port = port
+        self.password = password
 
     def init(self):
         """
@@ -65,7 +69,7 @@ class Redis_retention_scheduler(BaseModule):
         """
         logger.debug("[RedisRetention] Initialization of the redis module")
         #self.return_queue = self.properties['from_queue']
-        self.mc = redis.Redis(self.server)
+        self.mc = redis.Redis(host=self.server, port=self.port, password=self.password)
 
     def hook_save_retention(self, daemon):
         """
