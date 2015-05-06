@@ -75,7 +75,7 @@ class RedisRetentionScheduler(BaseModule):
         """
         Called by Scheduler to say 'let's prepare yourself guy'
         """
-        logger.debug("[RedisRetention] Initialization of the redis module")
+        logger.info("[RedisRetention] Initialization of the redis module")
         # self.return_queue = self.properties['from_queue']
         if self.password:
             self.mc = redis.Redis(host=self.server, port=self.port,
@@ -106,8 +106,8 @@ class RedisRetentionScheduler(BaseModule):
             s = services[(h_name, s_desc)]
             key = "%s-SERVICE-%s,%s" % (self.key_prefix, h_name, s_desc) if \
                   self.key_prefix else "SERVICE-%s,%s" % (h_name, s_desc)
-            # space are not allowed in memcached key.. so change it by
-            # SPACE token
+            # space are not allowed in memcached key, so change it by
+            # SPACEREPLACEMENT token
             key = key.replace(' ', 'SPACEREPLACEMENT')
             # print "Using key", key
             val = cPickle.dumps(s)
@@ -118,7 +118,7 @@ class RedisRetentionScheduler(BaseModule):
     def hook_load_retention(self, daemon):
 
         # Now the new redis way :)
-        logger.debug("[RedisRetention] asking me to load retention objects")
+        logger.info("[RedisRetention] asking me to load retention objects")
 
         # We got list of loaded data from retention server
         ret_hosts = {}
@@ -140,8 +140,8 @@ class RedisRetentionScheduler(BaseModule):
                                         s.service_description) if \
                   self.key_prefix else "SERVICE-%s,%s" % (s.host.host_name,
                                                           s.service_description)
-            # space are not allowed in memcached key.. so change it by SPACE
-            # token
+            # space are not allowed in memcached key, so change it by
+            # SPACEREPLACEMENT token
             key = key.replace(' ', 'SPACEREPLACEMENT')
             # print "Using key", key
             val = self.mc.get(key)
