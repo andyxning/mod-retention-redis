@@ -2,7 +2,8 @@
 mod-retention-redis
 ===================
 
-Shinken module for saving retention data from schedulers to a redis server
+Shinken module for saving retention data from schedulers to a redis server 
+using [redis-py](https://github.com/andymccurdy/redis-py).
 
 Enhancement
 ===========
@@ -30,6 +31,7 @@ a password and run in a different port instead the default 6379.
 Installation
 ============
 Assuming Shinken is installed under standard directory
+* install [redis-py](https://github.com/andymccurdy/redis-py) first
 * copy files under `module` directory to 
 `/var/lib/shinken/modules/redis-retention`(you should create 
 directory `redis-retention` first)
