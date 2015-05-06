@@ -26,3 +26,13 @@ a password and run in a different port instead the default 6379.
   * If you specify `key_prefix`, it will add the `key_prefix` to the 
   beginning of the keys to be stored in Redis, Otherwise, Nothing will 
   prefix the keys.
+  
+Installation
+============
+Assuming Shinken is installed under standard directory
+* copy files under `module` directory to 
+`/var/lib/shinken/modules/redis-retention`(you should create 
+directory `redis-retention` first)
+* copy files under `etc/module` directory to `/etc/shinken/modules/`
+* to all files in `/etc/shinken/schedulers/*.cfg` append `modules` with 
+`redis-retention`
