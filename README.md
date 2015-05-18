@@ -14,6 +14,14 @@ setups can be absolutely unique by using different prefixes.
   exist in a single Shinken setup. If we have many Shinken setups, we can 
   not make sure all `host_name + service_description` be unique.
  
+* redis `expire time`
+  * In case we change the configuration of Shinken, some service
+  or host retention info will be deleted and then become useless. We can
+  then add an expire time to each host or service info to make the useful
+  retention persistent long by updating the expire time every time we save
+  the retention info and the useless ones expired sometime and deleted
+  automatically by Redis.
+ 
 * add redis `port` and `password`, this is usefull if your Redis server has 
 a password and run in a different port instead the default 6379.
   * If you do not specify `server`, it will connect to Redis instance 

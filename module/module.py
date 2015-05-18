@@ -47,41 +47,55 @@ def get_instance(plugin):
     logger.debug("Get a redis retention scheduler "
                  "module for plugin %s" % plugin.get_name())
     if not redis:
-        logger.error('Missing the module python-redis. Please install it.')
+        logger.error('Missing the module redis. Please install it.')
         raise Exception
 
     server = getattr(plugin, 'server', '127.0.0.1')
     password = getattr(plugin, 'password', '')
     port = int(getattr(plugin, 'port', '6379'))
     key_prefix = getattr(plugin, 'key_prefix', '')
+    expire_time = getattr(plugin, 'expire_time', 0)
 
     instance = RedisRetentionScheduler(plugin, server, password, port,
-                                       key_prefix)
+                                       key_prefix, expire_time)
     return instance
 
 
 class RedisRetentionScheduler(BaseModule):
 
-    def __init__(self, modconf, server, password, port, key_prefix):
+    def __init__(self, modconf, server, password, port, key_prefix,
+                 expire_time):
         BaseModule.__init__(self, modconf)
         self.server = server
         self.port = port
         self.password = password
         self.key_prefix = key_prefix
+        self.expire_time = expire_time
 
-        self.mc = None
+        self.rc = None
 
     def init(self):
         """
         Called by Scheduler to say 'let's prepare yourself guy'
         """
         logger.info("[RedisRetention] Initialization of the redis module")
-        # self.return_queue = self.properties['from_queue']
         if self.password:
-            self.mc = redis.Redis(host=self.server, port=self.port,
+            self.rc = redis.Redis(host=self.server, port=self.port,
                                   password=self.password)
         else:
-            self.mc = redis.Redis(host=self.server, port=self.port)
+            self.rc = redis.Redis(host=self.server, port=self.port)
+
+    def _get_host_key(self, h_name):
+        host_key = '%s-HOST-%s' % (self.key_prefix, h_name) \
+                   if self.key_prefix else 'HOST-%s' % h_name
+        return host_key
+
+    def _get_service_key(self, h_name, s_name):
+        service_key = '%s-SERVICE-%s,%s' % (self.key_prefix, h_name, s_name)\
+                      if self.key_prefix \
+                      else 'SERVICE-%s,%s' % (h_name, s_name)
+        return service_key
+
 
     def hook_save_retention(self, daemon):
         """
@@ -97,21 +111,21 @@ class RedisRetentionScheduler(BaseModule):
         # Now the flat file method
         for h_name in hosts:
             h = hosts[h_name]
-            key = "%s-HOST-%s" % (self.key_prefix, h_name) if \
-                  self.key_prefix else "HOST-%s" % h_name
+            key = self._get_host_key(h_name)
             val = cPickle.dumps(h)
-            self.mc.set(key, val)
+            if self.expire_time:
+                self.rc.set(key, val, ex=self.expire_time)
+            else:
+                self.rc.set(key, val)
 
         for (h_name, s_desc) in services:
             s = services[(h_name, s_desc)]
-            key = "%s-SERVICE-%s,%s" % (self.key_prefix, h_name, s_desc) if \
-                  self.key_prefix else "SERVICE-%s,%s" % (h_name, s_desc)
-            # space are not allowed in memcached key, so change it by
-            # SPACEREPLACEMENT token
-            key = key.replace(' ', 'SPACEREPLACEMENT')
-            # print "Using key", key
+            key = self._get_service_key(h_name, s_desc)
             val = cPickle.dumps(s)
-            self.mc.set(key, val)
+            if self.expire_time:
+                self.rc.set(key, val, ex=self.expire_time)
+            else:
+                self.rc.set(key, val)
         logger.info("Retention information updated in Redis")
 
     # Should return if it succeed in the retention load or not
@@ -126,27 +140,17 @@ class RedisRetentionScheduler(BaseModule):
 
         # We must load the data and format as the scheduler want :)
         for h in daemon.hosts:
-            key = "%s-HOST-%s" % (self.key_prefix, h.host_name) if \
-                  self.key_prefix else "HOST-%s" % h.host_name
-            val = self.mc.get(key)
+            key = self._get_host_key(h.host_name)
+            val = self.rc.get(key)
             if val is not None:
-                # redis get unicode, but we send string, so we are ok
-                # val = str(unicode(val))
                 val = cPickle.loads(val)
                 ret_hosts[h.host_name] = val
 
         for s in daemon.services:
-            key = "%s-SERVICE-%s,%s" % (self.key_prefix, s.host.host_name,
-                                        s.service_description) if \
-                  self.key_prefix else "SERVICE-%s,%s" % (s.host.host_name,
-                                                          s.service_description)
-            # space are not allowed in memcached key, so change it by
-            # SPACEREPLACEMENT token
-            key = key.replace(' ', 'SPACEREPLACEMENT')
-            # print "Using key", key
-            val = self.mc.get(key)
+            key = self._get_service_key(s.host.host_name,
+                                        s.service_description)
+            val = self.rc.get(key)
             if val is not None:
-                # val = str(unicode(val))
                 val = cPickle.loads(val)
                 ret_services[(s.host.host_name, s.service_description)] = val
 
