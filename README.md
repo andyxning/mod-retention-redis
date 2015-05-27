@@ -5,6 +5,10 @@ mod-retention-redis
 Shinken module for saving retention data from schedulers to a redis server 
 using [redis-py](https://github.com/andymccurdy/redis-py).
 
+reliability and usability
+===========
+We use this Scheduler module in **Production** environment.
+
 Enhancement
 ===========
 * add redis `key prefix`, so if we use multiple Shinken setups with single 
